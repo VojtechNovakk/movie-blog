@@ -7,6 +7,7 @@ CREATE TABLE movies (
     review TEXT NOT NULL,
     date DATE NOT NULL,
     poster VARCHAR(255),
+    rating INT NOT NULL,
     cinema_id INT NOT NULL
 );
 ALTER TABLE movies ADD CONSTRAINT pk_movie PRIMARY KEY (movie_id);
