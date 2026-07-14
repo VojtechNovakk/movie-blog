@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Bebas_Neue, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import CustomCursor from "./CustomCursor";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({
       className={`${inter.variable} ${bebasNeue.variable} ${jetBrainsMono.variable}`}
     >
       <body className={`${inter.className} bg-white text-black h-dvh w-full overflow-hidden flex flex-col`}>
+        <CustomCursor />
         {children}
       </body>
     </html>

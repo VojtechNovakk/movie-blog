@@ -12,6 +12,7 @@ type Movie = {
   poster: string;
   cinema_name: string;
   cinema_website: string;
+  rating: number;
 };
 
 function formatDuration(minutes: number): string {
@@ -40,8 +41,6 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
   const mainStarsRef = useRef<HTMLDivElement>(null);
   const mainMetaRef = useRef<HTMLDivElement>(null);
   const mainReviewRef = useRef<HTMLDivElement>(null);
-  const cursorDotRef = useRef<HTMLDivElement>(null);
-  const cursorRingRef = useRef<HTMLDivElement>(null);
 
   const wheelState = useRef({
     rotation: 0,
@@ -125,8 +124,9 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
       mainReview.classList.remove("visible");
 
       setTimeout(() => {
-        mainReview.innerHTML = `<div class="review-text">${f.review}</div>`;
-        mainStars.innerHTML = "★★★★☆";
+        mainReview.innerHTML = `<div class="review-text text-justify hyphens-auto text-sm md:text-base leading-relaxed" lang="cs">${f.review}</div>`;
+        const stars = "★".repeat(f.rating || 5) + "☆".repeat(5 - (f.rating || 5));
+        mainStars.innerHTML = stars;
         mainMeta.innerHTML = `Watched on ${new Date(f.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}<br>@ <a href="${f.cinema_website}" target="_blank">${f.cinema_name}</a>`;
 
         posterImg.src = f.poster;
@@ -281,73 +281,6 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
     };
   }, [filteredMovies, norm]);
 
-  useEffect(() => {
-    const cursorDot = cursorDotRef.current;
-    const cursorRing = cursorRingRef.current;
-    let cursorRafId: number;
-
-    if (
-      window.matchMedia("(pointer: fine)").matches &&
-      cursorDot &&
-      cursorRing
-    ) {
-      let mouseX = window.innerWidth / 2;
-      let mouseY = window.innerHeight / 2;
-      let ringX = mouseX;
-      let ringY = mouseY;
-
-      const onMouseMove = (e: MouseEvent) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-        cursorDot.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
-      };
-
-      const renderCursor = () => {
-        ringX += (mouseX - ringX) * 0.15;
-        ringY += (mouseY - ringY) * 0.15;
-        cursorRing.style.transform = `translate3d(${ringX}px, ${ringY}px, 0)`;
-        cursorRafId = requestAnimationFrame(renderCursor);
-      };
-
-      const onMouseOver = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (
-          target.closest(".ticket") ||
-          target.closest("input") ||
-          target.closest(".poster-container") ||
-          target.closest("a")
-        ) {
-          cursorDot.classList.add("hover");
-          cursorRing.classList.add("hover");
-        }
-      };
-
-      const onMouseOut = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (
-          target.closest(".ticket") ||
-          target.closest("input") ||
-          target.closest(".poster-container") ||
-          target.closest("a")
-        ) {
-          cursorDot.classList.remove("hover");
-          cursorRing.classList.remove("hover");
-        }
-      };
-
-      window.addEventListener("mousemove", onMouseMove);
-      document.body.addEventListener("mouseover", onMouseOver);
-      document.body.addEventListener("mouseout", onMouseOut);
-      cursorRafId = requestAnimationFrame(renderCursor);
-
-      return () => {
-        window.removeEventListener("mousemove", onMouseMove);
-        document.body.removeEventListener("mouseover", onMouseOver);
-        document.body.removeEventListener("mouseout", onMouseOut);
-        cancelAnimationFrame(cursorRafId);
-      };
-    }
-  }, []);
 
   if (!movies || movies.length === 0) {
     return (
@@ -358,19 +291,9 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
   }
 
   return (
-    <>
+    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col overflow-hidden bg-white">
       {/* Film Grain */}
       <div className="fixed inset-0 w-screen h-screen pointer-events-none z-[9999] opacity-[0.035] animate-[grain_1s_steps(2)_infinite] bg-[url('data:image/svg+xml,%3Csvg%20viewBox=%220%200%20200%20200%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter%20id=%22noiseFilter%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.75%22%20numOctaves=%223%22%20stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect%20width=%22100%25%22%20height=%22100%25%22%20filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')]"></div>
-
-      {/* Custom Cursor */}
-      <div
-        ref={cursorDotRef}
-        className="cursor-dot fixed top-0 left-0 rounded-full pointer-events-none z-[10000] -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-black transition-[width,height,opacity] duration-200"
-      ></div>
-      <div
-        ref={cursorRingRef}
-        className="cursor-ring fixed top-0 left-0 rounded-full pointer-events-none z-[10000] -translate-x-1/2 -translate-y-1/2 w-8 h-8 border border-black/25 transition-[width,height,border-color,background-color] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
-      ></div>
 
       {/* Header */}
       <header className="w-full pt-10 flex justify-center relative z-10 shrink-0">
@@ -391,17 +314,17 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
       </header>
 
       {/* Main */}
-      <main className="flex-1 flex justify-center items-center relative z-[5] pb-[min(240px,30vh)] min-h-0">
+      <main className="flex-1 flex justify-center items-center relative z-[5] pb-[min(200px,25vh)] md:pb-[min(240px,30vh)] min-h-0 pt-4 md:pt-0">
         {filteredMovies.length === 0 ? (
-          <div className="text-center text-[#888] text-lg">
+          <div className="text-center text-[#888] text-lg px-4">
             No movies match your search.
           </div>
         ) : (
           <>
-            <div className="content-wrapper flex items-center justify-center gap-[clamp(40px,8vw,80px)] w-full max-w-[1200px] min-h-0">
+            <div className="content-wrapper flex flex-col md:flex-row items-center justify-center gap-6 md:gap-[clamp(40px,8vw,80px)] w-full max-w-[1200px] min-h-0 px-6">
               {/* Poster */}
               <div
-                className="poster-container aspect-[2/3] max-w-[320px] h-[min(420px,50vh)] rounded-[4px] overflow-hidden transition-[transform,box-shadow] duration-[600ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] bg-[#f9f9f9] shrink-0 relative hover:scale-[1.03] hover:-translate-y-2.5"
+                className="poster-container aspect-[2/3] w-[140px] md:w-auto md:max-w-[320px] md:h-[min(420px,50vh)] rounded-lg md:rounded-[4px] overflow-hidden transition-[transform,box-shadow] duration-[600ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] bg-[#f9f9f9] shrink-0 relative hover:scale-[1.03] hover:-translate-y-2.5 shadow-lg"
                 ref={posterContainerRef}
               >
                 <img
@@ -413,19 +336,19 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
               </div>
 
               {/* Review */}
-              <div className="review-section w-[560px] h-[min(420px,50vh)] flex flex-col">
+              <div className="review-section w-full md:w-[560px] h-[30vh] md:h-[min(420px,50vh)] flex flex-col items-center md:items-start text-center md:text-left">
                 <div
-                  className="stagger-item text-xl tracking-[6px] mb-3 text-black shrink-0 pt-2.5"
+                  className="stagger-item text-lg md:text-xl tracking-[4px] md:tracking-[6px] mb-2 md:mb-3 text-black shrink-0 pt-0 md:pt-2.5"
                   id="main-stars"
                   ref={mainStarsRef}
                 ></div>
                 <div
-                  className="review-meta stagger-item font-mono text-[10px] uppercase text-[#777] mb-6 tracking-[0.5px]"
+                  className="review-meta stagger-item font-mono text-[9px] md:text-[10px] uppercase text-[#777] mb-4 md:mb-6 tracking-[0.5px]"
                   id="main-meta"
                   ref={mainMetaRef}
                 ></div>
                 <div
-                  className="review-content stagger-item max-h-full overflow-y-auto pr-6 pb-5 flex flex-col"
+                  className="review-content stagger-item max-h-full overflow-y-auto pr-0 md:pr-6 pb-5 flex flex-col w-full"
                   id="main-review"
                   ref={mainReviewRef}
                 ></div>
@@ -434,12 +357,12 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
 
             {/* Wheel */}
             <div
-              className="wheel-stage fixed bottom-0 left-0 w-full h-[320px] touch-pan-y select-none outline-none z-20"
+              className="wheel-stage absolute bottom-0 left-0 w-full h-[320px] touch-none select-none outline-none z-20"
               ref={stageRef}
             ></div>
           </>
         )}
       </main>
-    </>
+    </div>
   );
 }
