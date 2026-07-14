@@ -20,7 +20,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MovieMatch - Minimalist Review",
+  title: "FilmFilm",
   description: "A minimalist movie review blog",
 };
 
