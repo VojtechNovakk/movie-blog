@@ -33,7 +33,7 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${bebasNeue.variable} ${jetBrainsMono.variable}`}
     >
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-white text-black h-dvh w-full overflow-hidden flex flex-col`}>
         {children}
       </body>
     </html>
