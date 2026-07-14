@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 
 type Movie = {
   movie_id: number;
@@ -21,6 +21,19 @@ function formatDuration(minutes: number): string {
 }
 
 export default function MovieViewer({ movies }: { movies: Movie[] }) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // useMemo = přepočítá filtrovaný seznam JEN když se změní searchQuery nebo movies
+  const filteredMovies = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return movies; // prázdný dotaz = všechny filmy
+    return movies.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        m.director.toLowerCase().includes(q)
+    );
+  }, [movies, searchQuery]);
+
   const stageRef = useRef<HTMLDivElement>(null);
   const posterContainerRef = useRef<HTMLDivElement>(null);
   const posterImgRef = useRef<HTMLImageElement>(null);
@@ -48,9 +61,14 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
   }, []);
 
   useEffect(() => {
-    if (!movies || movies.length === 0) return;
+    if (!filteredMovies || filteredMovies.length === 0) {
+      // Pokud hledání nic nenajde, vyčistíme wheel
+      const stage = stageRef.current;
+      if (stage) stage.innerHTML = "";
+      return;
+    }
 
-    const items = movies;
+    const items = filteredMovies;
     const N = items.length;
     const STEP = 11;
     const R = 750;
@@ -251,7 +269,19 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
 
     render();
 
-    // --- Custom Cursor ---
+    return () => {
+      if (stage) {
+        stage.removeEventListener("pointerdown", onPointerDown);
+        stage.removeEventListener("pointermove", onPointerMove);
+        stage.removeEventListener("pointerup", onPointerUp);
+        stage.removeEventListener("wheel", onWheel);
+      }
+      window.removeEventListener("resize", render);
+      if (ws.animId) cancelAnimationFrame(ws.animId);
+    };
+  }, [filteredMovies, norm]);
+
+  useEffect(() => {
     const cursorDot = cursorDotRef.current;
     const cursorRing = cursorRingRef.current;
     let cursorRafId: number;
@@ -269,13 +299,13 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
       const onMouseMove = (e: MouseEvent) => {
         mouseX = e.clientX;
         mouseY = e.clientY;
-        cursorDot.style.transform = `translate(calc(${mouseX}px - 50%), calc(${mouseY}px - 50%))`;
+        cursorDot.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
       };
 
       const renderCursor = () => {
         ringX += (mouseX - ringX) * 0.15;
         ringY += (mouseY - ringY) * 0.15;
-        cursorRing.style.transform = `translate(calc(${ringX}px - 50%), calc(${ringY}px - 50%))`;
+        cursorRing.style.transform = `translate3d(${ringX}px, ${ringY}px, 0)`;
         cursorRafId = requestAnimationFrame(renderCursor);
       };
 
@@ -311,28 +341,13 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
       cursorRafId = requestAnimationFrame(renderCursor);
 
       return () => {
-        stage.removeEventListener("pointerdown", onPointerDown);
-        stage.removeEventListener("pointermove", onPointerMove);
-        stage.removeEventListener("pointerup", onPointerUp);
-        stage.removeEventListener("wheel", onWheel);
-        window.removeEventListener("resize", render);
         window.removeEventListener("mousemove", onMouseMove);
         document.body.removeEventListener("mouseover", onMouseOver);
         document.body.removeEventListener("mouseout", onMouseOut);
         cancelAnimationFrame(cursorRafId);
-        if (ws.animId) cancelAnimationFrame(ws.animId);
       };
     }
-
-    return () => {
-      stage.removeEventListener("pointerdown", onPointerDown);
-      stage.removeEventListener("pointermove", onPointerMove);
-      stage.removeEventListener("pointerup", onPointerUp);
-      stage.removeEventListener("wheel", onWheel);
-      window.removeEventListener("resize", render);
-      if (ws.animId) cancelAnimationFrame(ws.animId);
-    };
-  }, [movies, norm]);
+  }, []);
 
   if (!movies || movies.length === 0) {
     return (
@@ -366,6 +381,8 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
           <div className="w-full px-5">
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#f5f5f5] backdrop-blur-[10px] border border-[#ccc] rounded-full py-3 px-6 font-sans text-base text-black outline-none transition-all duration-300 text-center appearance-none shadow-[0_2px_10px_rgba(0,0,0,0.03)] placeholder:text-[#888] placeholder:tracking-[0.5px] placeholder:font-normal focus:border-black focus:shadow-[0_4px_12px_rgba(0,0,0,0.04)] focus:bg-white"
               placeholder="Search a masterpiece..."
             />
@@ -375,45 +392,53 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
 
       {/* Main */}
       <main className="flex-1 flex justify-center items-center relative z-[5] pb-[min(240px,30vh)] min-h-0">
-        <div className="content-wrapper flex items-center justify-center gap-[clamp(40px,8vw,80px)] w-full max-w-[1200px] min-h-0">
-          {/* Poster */}
-          <div
-            className="poster-container aspect-[2/3] max-w-[320px] h-[min(420px,50vh)] rounded-[4px] overflow-hidden transition-[transform,box-shadow] duration-[600ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] bg-[#f9f9f9] shrink-0 relative hover:scale-[1.03] hover:-translate-y-2.5"
-            ref={posterContainerRef}
-          >
-            <img
-              ref={posterImgRef}
-              src={movies[0].poster}
-              alt="Movie Poster"
-              className="w-full h-full object-cover block"
-            />
+        {filteredMovies.length === 0 ? (
+          <div className="text-center text-[#888] text-lg">
+            No movies match your search.
           </div>
+        ) : (
+          <>
+            <div className="content-wrapper flex items-center justify-center gap-[clamp(40px,8vw,80px)] w-full max-w-[1200px] min-h-0">
+              {/* Poster */}
+              <div
+                className="poster-container aspect-[2/3] max-w-[320px] h-[min(420px,50vh)] rounded-[4px] overflow-hidden transition-[transform,box-shadow] duration-[600ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] bg-[#f9f9f9] shrink-0 relative hover:scale-[1.03] hover:-translate-y-2.5"
+                ref={posterContainerRef}
+              >
+                <img
+                  ref={posterImgRef}
+                  src={filteredMovies[0]?.poster}
+                  alt="Movie Poster"
+                  className="w-full h-full object-cover block"
+                />
+              </div>
 
-          {/* Review */}
-          <div className="review-section w-[560px] h-[min(420px,50vh)] flex flex-col">
-            <div
-              className="stagger-item text-xl tracking-[6px] mb-3 text-black shrink-0 pt-2.5"
-              id="main-stars"
-              ref={mainStarsRef}
-            ></div>
-            <div
-              className="review-meta stagger-item font-mono text-[10px] uppercase text-[#777] mb-6 tracking-[0.5px]"
-              id="main-meta"
-              ref={mainMetaRef}
-            ></div>
-            <div
-              className="review-content stagger-item max-h-full overflow-y-auto pr-6 pb-5 flex flex-col"
-              id="main-review"
-              ref={mainReviewRef}
-            ></div>
-          </div>
-        </div>
+              {/* Review */}
+              <div className="review-section w-[560px] h-[min(420px,50vh)] flex flex-col">
+                <div
+                  className="stagger-item text-xl tracking-[6px] mb-3 text-black shrink-0 pt-2.5"
+                  id="main-stars"
+                  ref={mainStarsRef}
+                ></div>
+                <div
+                  className="review-meta stagger-item font-mono text-[10px] uppercase text-[#777] mb-6 tracking-[0.5px]"
+                  id="main-meta"
+                  ref={mainMetaRef}
+                ></div>
+                <div
+                  className="review-content stagger-item max-h-full overflow-y-auto pr-6 pb-5 flex flex-col"
+                  id="main-review"
+                  ref={mainReviewRef}
+                ></div>
+              </div>
+            </div>
 
-        {/* Wheel */}
-        <div
-          className="wheel-stage fixed bottom-0 left-0 w-full h-[320px] touch-pan-y select-none outline-none z-20"
-          ref={stageRef}
-        ></div>
+            {/* Wheel */}
+            <div
+              className="wheel-stage fixed bottom-0 left-0 w-full h-[320px] touch-pan-y select-none outline-none z-20"
+              ref={stageRef}
+            ></div>
+          </>
+        )}
       </main>
     </>
   );
