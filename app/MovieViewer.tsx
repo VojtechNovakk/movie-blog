@@ -152,7 +152,7 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
     function render() {
       const w = stage.clientWidth;
       const px = w / 2;
-      const py = stage.clientHeight + 480;
+      const py = stage.clientHeight + 560;
 
       let bestI = 0;
       let bestAbs = 999;
@@ -172,7 +172,7 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
         const abs = Math.abs(a);
         const rad = (a * Math.PI) / 180;
         const x = px + R * Math.sin(rad) - 80;
-        const y = py - R * Math.cos(rad) - 70;
+        const y = py - R * Math.cos(rad) - 60;
 
         let scale = Math.max(0.6, 1 - abs / 180);
         if (i === bestI) scale *= 1.22;
@@ -314,7 +314,7 @@ export default function MovieViewer({ movies }: { movies: Movie[] }) {
       </header>
 
       {/* Main */}
-      <main className="flex-1 flex justify-center items-center relative z-[5] pb-[min(200px,25vh)] md:pb-[min(240px,30vh)] min-h-0 pt-4 md:pt-0">
+      <main className="flex-1 flex justify-center items-center relative z-[5] pb-[min(220px,28vh)] md:pb-[min(280px,35vh)] min-h-0 pt-4 md:pt-0">
         {filteredMovies.length === 0 ? (
           <div className="text-center text-[#888] text-lg px-4">
             No movies match your search.
